@@ -1,0 +1,32 @@
+Version 5 - May 30, 2017
+==============================================
+- Clean up for migration to Github.
+
+
+Version 4 - Sep 5, 2016
+==============================================
+- Added support for Current Sensors. Any sensor such as a current transformer or 
+  hall-effect chip that outputs AC signals should work. Not calibrated to a 
+  standard unit yet.
+
+
+Version 3 - Aug 21, 2016
+===============================================
+- Added suport for the SHARP dust sensor GP2Y1010AU0F 
+
+
+Version 2 - Jul 4, 2016 - Arnan Siptiakiat
+===============================================
+- Added. Support for a second DHT temperature/RH sensor
+- Added. Firmware version is assigned to deviceRegister[0]Version 1.1.0 - Mar 23, 2016
+===============================================
+- Added support for the DS18B20 temperature sensor. It supports up to 8 sensors 
+  chained together on the 1-wire bus. 
+
+Version 1.0.1 - Dec 17, 2015
+===============================================
+- Fixed. A synchronization issue that caused the Master to lockup after some time.
+  Now the board will refresh the sensor value only when a target device is configured.
+  This means you need to configure the target repeatedly to get an updated value.
+- Changed. The heart beat LED now blinks everytime there is a sensor reading activity.
+
