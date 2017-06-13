@@ -138,6 +138,7 @@ int1 gblUpdateDeviceValue=0;
 #include "dust_gp2y1010au0f.h"
 #include "current.h"
 #include "heartrate.h"
+#include "HX711.h"
 
 int targetDevice;
 
@@ -331,3 +332,4 @@ void main()
 #include "dust_gp2y1010au0f.c"
 #include "current.c"
 #include "heartrate.c"
+#include "HX711.c"
