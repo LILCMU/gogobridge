@@ -17,35 +17,10 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
+#include "gogobridge.h"
 
+#define GOGO_BRIDGE_VERSION      6
 
-
-#include <16F1705.h>
-#device adc=10
-#case
-
-
-#FUSES INTRC_IO      //Internal RC Osc, on CLKOUT
-#FUSES NOWDT         //No Watch Dog Timer
-//#FUSES HS            //High speed Osc (> 4mhz for PCM/PCH) (>10mhz for PCD)
-#FUSES NOMCLR //Master Clear pin disabled
-#FUSES BROWNOUT // brownout reset
-#FUSES BORV25
-#FUSES LVP           //Low Voltage Programing
-#FUSES PUT                      //Power Up Timer
-//#FUSES NOCPD                    //No EE protection
-#FUSES IESO                     //Internal External Switch Over mode enabled
-#FUSES FCMEN                    //Fail-safe clock monitor enabled
-#FUSES NODEBUG                  //No Debug mode for ICD
-#FUSES NOWRT                    //Program memory not write protected
-#FUSES RESERVED                 //Used to set the reserved FUSE bits
-#FUSES NOPPS1WAY                // Allow multiple configurations of peripheral pins
-
-
-#define GOGO_BRIDGE_VERSION      5
-
-#use delay(clock=32 MHz)
-#use rs232(baud=115200,xmit=PIN_C4,rcv=PIN_C5)
 
 int1 gblUpdateDeviceValue=0;
 
@@ -106,7 +81,8 @@ int1 gblUpdateDeviceValue=0;
 #define DHT2_RH                  40    // RH from DHT11, DHT22
 #define DHT2_RH_DECIMAL          41    // decimal RH from DHT22
 #define HARTRATE                 42    // hear rate pulse sensor
-
+#define HX711_INTEGER            43    // Load cell sensor
+#define HX711_DECIMAL            44    // Load cell sensor decimal
 
 // ===========================================================================
 // Device definition
@@ -125,8 +101,11 @@ int1 gblUpdateDeviceValue=0;
 #define DS18B20   14
 #define DUST_GP2Y 15       // SHARP dust densor gp2y1010au0f
 #define CURRENT   16       // A current transformer or current sensor input (assumes an AC signal)
+#define HX711     17       // Load cell
+#define HX711_CALIBRATION  18       // perform a load cell calibration
 
 #define PIN_HEARTBEAT   PIN_A5   // heart beat LED
+
 
 // Header files for the code implementing each device
 #include "DHT.h"
@@ -167,6 +146,7 @@ void main()
    int16 heartBeatCounter=0;
    int16 foo;
    int i=0;
+   float weight=0;
 
    enable_interrupts(INT_SSP);
    enable_interrupts(GLOBAL);
@@ -312,7 +292,23 @@ void main()
          deviceRegister[CURRENT_HIGH] = foo >> 8;         
       
       }
-         
+
+
+      if (targetDevice == HX711_CALIBRATION) {
+         HX711_begin();
+         HX711_set_scale(12125); // used to convert readings to kg. Must change for each load cell model.
+         HX711_read_average(10); // just to warm up the load cell
+         HX711_tare();
+      }
+
+      if (targetDevice == HX711) {
+         weight = HX711_get_units(5);
+    //     printf("weight = %f\r\n", weight);
+         deviceRegister[HX711_INTEGER] = (int)weight;
+         deviceRegister[HX711_DECIMAL] = (int16)(weight*10) % 10;   // show just one decimal point
+//!         deviceRegister[HX711_INTEGER] = 79;
+//!         deviceRegister[HX711_DECIMAL] = 5;   // show just one decimal point      
+      }  
       output_toggle(PIN_HEARTBEAT);
      
    

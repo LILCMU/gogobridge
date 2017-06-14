@@ -1,4 +1,16 @@
+//!#DEFINE HX711_SELF_TEST
 
+
+#IFDEF HX711_SELF_TEST
+   #include <gogobridge.h>
+   #include <hx711.h>
+#ENDIF
+
+void HX711_output_pulse() {
+      output_high(PD_SCK);  delay_us(1);  // pulse width is 1 us typical as per the datasheet
+      output_low(PD_SCK); delay_us(1);
+}
+    
     // "yield" is not implemented as noop in older Arduino Core releases, so let's define it.
     // See also: https://stackoverflow.com/questions/34497758/what-is-the-secret-of-the-arduino-yieldfunction/34498165#34498165
 void HX711_yield(void) {
@@ -6,12 +18,12 @@ void HX711_yield(void) {
 }
 
 
-HX711_init(byte gain) {
+HX711_init(byte gain=HX711_GAIN) {
    HX711_begin(gain);
 }
 
 
-void HX711_begin(byte gain) {
+void HX711_begin(byte gain=HX711_GAIN) {
 
 //!   pinMode(PD_SCK, OUTPUT);
 //!   pinMode(DOUT, INPUT);
@@ -23,7 +35,7 @@ bool HX711_is_ready() {
    return (input(DOUT) == LOW);
 }
 
-void HX711_set_gain(byte gain) {
+void HX711_set_gain(byte gain=HX711_GAIN) {
    switch (gain) {
       case 128:      // channel A, gain factor 128
          GAIN = 1;
@@ -40,9 +52,9 @@ void HX711_set_gain(byte gain) {
    HX711_read();
 }
 
-int32 HX711_read() {
+signed int32 HX711_read() {
 
-   int32 buffer;
+   signed int32 buffer=0;
    int i;
 
    // wait for the chip to become ready
@@ -51,50 +63,19 @@ int32 HX711_read() {
       HX711_yield();
    }
 
-//!   uint8_t data[3] = { 0 };
-//!   uint8_t filler = 0x00;
 
    for (i=24;i>0;i--) {
-      output_high(PD_SCK);
-      delay_us(100);
-      output_low(PD_SCK);
-      delay_us(100);
+      HX711_output_pulse();
       if (input(DOUT)) {   bit_set(buffer,i-1); }
       else             {  bit_clear(buffer,i-1);}
    }
    
-//!   data[2] = buffer>>16;
-//!   data[1] = (buffer>>8) & 255;
-//!   data[0] = buffer & 255;
-   
-  
-   // pulse the clock pin 24 times to read the data
-//!   data[2] = shiftIn(DOUT, PD_SCK, MSBFIRST);
-//!   data[1] = shiftIn(DOUT, PD_SCK, MSBFIRST);
-//!   data[0] = shiftIn(DOUT, PD_SCK, MSBFIRST);
-//!
    // set the channel and the gain factor for the next reading using the clock pin
    for (i = 0; i < GAIN; i++) {
-      output_bit(PD_SCK, HIGH);
-      output_bit(PD_SCK, LOW);
+      HX711_output_pulse();
    }
 
-//!   // Replicate the most significant bit to pad out a 32-bit signed integer
-//!   if (data[2] & 0x80) {
-//!      filler = 0xFF;
-//!   } else {
-//!      filler = 0x00;
-//!   }
-//!
-//!   // Construct a 32-bit signed integer
-//!   value = ( static_cast<unsigned long>(filler) << 24
-//!         | static_cast<unsigned long>(data[2]) << 16
-//!         | static_cast<unsigned long>(data[1]) << 8
-//!         | static_cast<unsigned long>(data[0]) );
-//!
-//!   return static_cast<long>(value);
-
-   if (bit_test(buffer, 23)) { buffer = buffer | (0xff<<24); }
+   if (bit_test(buffer, 23)) { buffer = buffer | ((int32)0xff<<24); }
    
    return buffer;
 
@@ -102,8 +83,8 @@ int32 HX711_read() {
 
 }
 
-int32 HX711_read_average(byte times) {
-   int32 sum = 0;
+signed int32 HX711_read_average(byte times=10) {
+   signed int32 sum = 0;
    for (byte i = 0; i < times; i++) {
       sum += HX711_read();
       HX711_yield();
@@ -111,20 +92,20 @@ int32 HX711_read_average(byte times) {
    return sum / times;
 }
 
-double HX711_get_value(byte times) {
+float HX711_get_value(byte times=1) {
    return HX711_read_average(times) - OFFSET;
 }
 
-float HX711_get_units(byte times) {
+float HX711_get_units(byte times = 1) {
    return HX711_get_value(times) / SCALE;
 }
 
-void HX711_tare(byte times) {
-   double sum = HX711_read_average(times);
+void HX711_tare(byte times=10) {
+   float sum = HX711_read_average(times);
    HX711_set_offset(sum);
 }
 
-void HX711_set_scale(float scale) {
+void HX711_set_scale(float scale=1.0) {
    SCALE = scale;
 }
 
@@ -132,11 +113,11 @@ float HX711_get_scale() {
    return SCALE;
 }
 
-void HX711_set_offset(int32 offset) {
+void HX711_set_offset(float offset=0) {
    OFFSET = offset;
 }
 
-int32 HX711_get_offset() {
+float HX711_get_offset() {
    return OFFSET;
 }
 
@@ -148,4 +129,41 @@ void HX711_power_down() {
 void HX711_power_up() {
    output_bit(PD_SCK, LOW);
 }
+
+#IFDEF HX711_SELF_TEST
+
+void main() {
+
+   float weight;
+
+  printf("HX711 Demo\r\n");
+  delay_ms(2000);
+  printf("Start in 5 secs\r\n");
+  delay_ms(5000);
+
+  printf("Initializing the scale\r\n");
+
+  HX711_begin();
+  HX711_set_scale(12125);                      // this value is obtained by calibrating the scale with known weights; see the README for details
+
+  // Best to print an average reading out once before calling tare()
+  printf("First read average = %Ld\r\n", HX711_read_average(10));
+  HX711_tare();
+  
+  while(1) {
+   weight= HX711_get_units(10);
+   printf("get units = %f\r\n", weight );
+   printf("%u - %lu\r\n", (int)weight, (int16)(weight*10)%10);
+   printf("ofset = %f\r\n", OFFSET);
+   printf("read average = %Ld\r\n", HX711_read_average(10));
+   delay_ms(1000);
+  
+  }
+  
+
+}
+
+
+
+#ENDIF
 
