@@ -83,6 +83,10 @@ signed int32 HX711_read() {
 
 }
 
+// HX711_read() itself executes quite fast (~0.5ms) 
+// but is stuck at HX711_is_ready() for a long time
+// (~90 ms). Should try to improve this.
+
 signed int32 HX711_read_average(byte times=10) {
    signed int32 sum = 0;
    for (byte i = 0; i < times; i++) {
