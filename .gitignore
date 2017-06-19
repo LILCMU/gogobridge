@@ -1,0 +1,9 @@
+*.ccspjt
+*.err
+*.esym
+*.xsym
+*.cof
+*.lst
+*.STA
+*.sym
+*.tre
