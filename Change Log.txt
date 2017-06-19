@@ -1,3 +1,25 @@
+
+Version 6 - June 19, 2017
+==============================================
+- Added support for the hx711 loadcell interface
+-- the following constant in hx711.h needs to be changed to match the load cell you are using
+   in order to properly convert the units to Kg. Place a known weight on the load cell then
+   call HX711_read_average() to get the raw readings. Then again with zero weight. Then do
+   (Value1 - Value2 ) / known-weight and you will get your SCALE value.
+
+   float SCALE = 12125 
+
+-- Call HX711_tare() with no weight to remove the offset. Then call HX711_get_units() to get
+   the weight in Kg. It basically performs 
+
+   Weight = (HX711_read_average() - OFFSET ) / SCALE
+
+-- Note the the HX711's output rate is about 10 Hz. So, HX711_read_average() which, by defualt, reads 
+   from the sensor 10 times could take up to 1 second to complete. If you call init()  and 
+   tare(), they each could take up 1 second as well. So, make sure you give the board enough time
+   to finish execution. 
+
+
 Version 5 - May 30, 2017
 ==============================================
 - Clean up for migration to Github.
